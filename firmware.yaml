@@ -1,0 +1,229 @@
+esphome:
+  name: my-esp32 
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+  variant: esp32s3
+
+wifi:
+  ssid: "SSID"
+  password: "PASSWORD"
+
+logger:
+api:
+ota:
+  - platform: esphome
+    password: "PASSWORD"
+
+i2c:
+  sda: GPIO41
+  scl: GPIO42
+  scan: true
+  id: bus_a
+
+time:
+  - platform: homeassistant
+    id: ha_time
+
+sensor:
+  - platform: adc
+    pin: GPIO1
+    name: "Potmeter 1"
+    id: pot1
+    update_interval: 200ms
+    attenuation: 12db
+    unit_of_measurement: "%"
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+      - calibrate_linear:
+          datapoints:
+            - 0.0 -> 0.0
+            - 3.13 -> 100.0
+      - clamp:
+          min_value: 0
+          max_value: 100
+          ignore_out_of_range: false
+      - round: 0
+      - delta: 2
+  - platform: adc
+    pin: GPIO2
+    name: "Potmeter 2"
+    id: pot2
+    update_interval: 200ms
+    attenuation: 12db
+    unit_of_measurement: "%"
+    filters:
+      - sliding_window_moving_average:
+          window_size: "5"
+          send_every: "1"
+      - calibrate_linear:
+          datapoints:
+            - 0.0 -> 0.00
+            - 3.13 -> 100.0
+      - clamp:
+          min_value: "0"
+          max_value: "100"
+          ignore_out_of_range: false
+      - round: 0
+      - delta: 2
+text_sensor:
+  - platform: homeassistant
+    id: spotify_title
+    entity_id: media_player.spotify_daniel
+    attribute: media_title
+  - platform: homeassistant
+    id: spotify_artist
+    entity_id: media_player.spotify_daniel
+    attribute: media_artist
+
+matrix_keypad:
+  rows:
+    - pin: GPIO4
+    - pin: GPIO5
+    - pin: GPIO6
+    - pin: GPIO7
+  columns:
+    - pin:
+        number: GPIO15
+        mode:
+          input: true
+          pullup: true
+    - pin:
+        number: GPIO16
+        mode:
+          input: true
+          pullup: true
+    - pin:
+        number: GPIO17
+        mode:
+          input: true
+          pullup: true
+    - pin:
+        number: GPIO18
+        mode:
+          input: true
+          pullup: true
+
+  keys: 12345678abcdefgh
+binary_sensor:
+  - platform: matrix_keypad
+    name: "Knop 1"
+    key: '1'
+  - platform: matrix_keypad
+    name: "Knop 2"
+    key: '2'
+  - platform: matrix_keypad
+    name: "Knop 3"
+    key: '3'
+  - platform: matrix_keypad
+    name: "Knop 4"
+    key: '4'
+  - platform: matrix_keypad
+    name: "Knop 5"
+    key: '5'
+  - platform: matrix_keypad
+    name: "Knop 6"
+    key: '6'
+  - platform: matrix_keypad
+    name: "Knop 7"
+    key: '7'
+  - platform: matrix_keypad
+    name: "Knop 8"
+    key: '8'
+  - platform: matrix_keypad
+    name: "Knop 9"
+    key: 'a'
+  - platform: matrix_keypad
+    name: "Knop 10"
+    key: 'b'
+  - platform: matrix_keypad
+    name: "Knop 11"
+    key: 'c'
+  - platform: matrix_keypad
+    name: "Knop 12"
+    key: 'd'
+  - platform: matrix_keypad
+    name: "Knop 13"
+    key: 'e'
+  - platform: matrix_keypad
+    name: "Knop 14"
+    key: 'f'
+  - platform: matrix_keypad
+    name: "Knop 15"
+    key: 'g'
+  - platform: matrix_keypad
+    name: "Knop 16"
+    key: 'h'
+
+output:
+  - platform: ledc
+    pin: GPIO47
+    id: led1_red
+  - platform: ledc
+    pin: GPIO48
+    id: led1_green
+  - platform: ledc
+    pin: GPIO21
+    id: led1_blue
+    
+  - platform: ledc
+    pin: GPIO38
+    id: led2_red
+  - platform: ledc
+    pin: GPIO39
+    id: led2_green
+  - platform: ledc
+    pin: GPIO40
+    id: led2_blue
+
+light:
+  - platform: rgb
+    name: "RGB LED 1"
+    red: led1_red
+    green: led1_green
+    blue: led1_blue
+  - platform: rgb
+    name: "RGB LED 2"
+    red: led2_red
+    green: led2_green
+    blue: led2_blue
+
+font:
+  - file: "gfonts://Courier+Prime"
+    id: Courier_Prime_10
+    size: 10
+  - file: "gfonts://Courier+Prime"
+    id: Courier_Prime_14
+    size: 14
+  - file: "gfonts://Courier+Prime"
+    id: Courier_Prime_8
+    size: 8
+
+display:
+  - platform: ssd1306_i2c
+    model: SSD1306_128X64
+    address: 0x3c
+    id: my_display
+    update_interval: 1s
+    lambda: |-
+      //time
+      auto time = id(ha_time).now();
+      if (time.is_valid()) {
+        it.strftime(40, 23, id(Courier_Prime_14), Color(255, 255, 255), "%H:%M", time);
+      }
+
+      // Playing + songname
+      it.print(4, 44, id(Courier_Prime_10), Color(255, 255, 255), "playing:");
+      it.print(54, 44, id(Courier_Prime_10), Color(255, 255, 255), id(spotify_title).state.c_str());
+
+      // By + artiest
+      it.print(4, 53, id(Courier_Prime_8), Color(255, 255, 255), "By:");
+      it.print(19, 53, id(Courier_Prime_8), Color(255, 255, 255), id(spotify_artist).state.c_str());
+
+      // Line
+      it.line(0, 19, 126, 19, Color(255, 255, 255));
+      it.line(0, 39, 126, 39, Color(255, 255, 255));
